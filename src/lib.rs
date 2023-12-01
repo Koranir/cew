@@ -38,11 +38,13 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn do_stuff() {
+    fn do_stuff() -> cew::U {
+        cew::init()?;
+
         fn test_fn() -> cew::U {
             cew::me!("This should error")
         }
 
-        test_fn().unwrap()
+        test_fn()
     }
 }
