@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Reexports of `color_eyre` to be quicker to type."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/Koranir/cew"
+keywords = ["utility", "simple", "logging"]
+categories = ["Rust patterns"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
