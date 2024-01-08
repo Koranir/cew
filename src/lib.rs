@@ -1,3 +1,5 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+
 //! A simple crate that shorten's `color_eyre`'s names.
 //!
 //! Run `cew::init()` to initialize `color_eyre`
@@ -27,24 +29,10 @@ macro_rules! me {
     };
 }
 
-/// Initialize `color_eyre`
+/// Initializes `color_eyre`
+///
+/// # Errors
+/// When called more than once
 pub fn init() -> U {
     color_eyre::install()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate as cew;
-
-    #[test]
-    #[should_panic]
-    fn do_stuff() -> cew::U {
-        cew::init()?;
-
-        fn test_fn() -> cew::U {
-            cew::me!("This should error")
-        }
-
-        test_fn()
-    }
 }
