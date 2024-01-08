@@ -1,6 +1,6 @@
 [package]
 name = "cew"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Reexports of `color_eyre` to be quicker to type."
 license = "MIT OR Apache-2.0"
