@@ -1,8 +1,8 @@
 [package]
 name = "cew"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-description = "Reexports of `color_eyre` to be quicker to type."
+description = "Personal Rust utility library"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Koranir/cew"
 keywords = ["utility", "simple", "logging"]
@@ -11,13 +11,14 @@ categories = ["Rust patterns"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-color-eyre = { version = "0.6.2", default-features = false }
+color-eyre = { version = "0.6.2", default-features = false, optional = true }
 
 [profile.dev.package.backtrace]
 opt-level = 3
 
 [features]
-default = ["track-caller", "capture-spantrace"]
-track-caller = ["color-eyre/track-caller"]
-capture-spantrace = ["color-eyre/capture-spantrace"]
-url = ["color-eyre/issue-url"]
+default = ["color_eyre", "track_caller", "capture_spantrace"]
+color_eyre = ["color-eyre"]
+track_caller = ["color-eyre?/track-caller"]
+capture_spantrace = ["color-eyre?/capture-spantrace"]
+url = ["color-eyre?/issue-url"]

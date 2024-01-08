@@ -1,7 +1,7 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(clippy::missing_errors_doc)]
 
-//! A simple crate that shorten's [`color_eyre`]'s names.
+//! A personal utility crate that shorten's [`color_eyre`]'s names and a little extra
 //!
 //! Run [`cew::init()`] to initialize [`color_eyre`]
 //!
@@ -16,29 +16,36 @@
 //! Also adds the globally implemented [`Pipe`], [`Inspect`], and [`Lay`]
 //! traits that provides a function to reduce the amount of stacked parenthesis.
 
-pub use color_eyre;
+#[cfg(feature = "color_eyre")]
+pub use color_eyre_reexports::*;
 
-pub use color_eyre::Result as R;
+#[cfg(feature = "color_eyre")]
+mod color_eyre_reexports {
 
-/// type alias for `Result<(), Report>`
-pub type U = R<()>;
+    pub use color_eyre;
 
-pub use color_eyre::eyre::eyre as e;
+    pub use color_eyre::Result as R;
 
-/// Construct an ad-hoc `color_eyre::Result::Err` from a string
-#[macro_export]
-macro_rules! me {
+    /// type alias for `Result<(), Report>`
+    pub type U = R<()>;
+
+    pub use color_eyre::eyre::eyre as e;
+
+    /// Construct an ad-hoc `color_eyre::Result::Err` from a string
+    #[macro_export]
+    macro_rules! me {
     ($($t:tt)*) => {
         core::result::Result::Err(cew::e!($($t)*))
     };
 }
 
-/// Initializes `color_eyre`
-///
-/// # Errors
-/// When called more than once
-pub fn init() -> U {
-    color_eyre::install()
+    /// Initializes `color_eyre`
+    ///
+    /// # Errors
+    /// When called more than once
+    pub fn init() -> U {
+        color_eyre::install()
+    }
 }
 
 /// Trait to prevent big wrapping '()'s everywhere.
