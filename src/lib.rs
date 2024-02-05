@@ -22,7 +22,7 @@ pub use color_eyre_reexports::*;
 #[cfg(feature = "color_eyre")]
 mod color_eyre_reexports {
 
-    pub use color_eyre;
+    // pub use color_eyre;
 
     pub use color_eyre::Result as R;
 
