@@ -1,14 +1,12 @@
 [package]
 name = "cew"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 description = "Personal Rust utility library"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Koranir/cew"
 keywords = ["utility", "simple", "logging"]
 categories = ["Rust patterns"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 color-eyre = { version = "0.6.2", default-features = false, optional = true }
