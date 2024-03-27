@@ -1,6 +1,6 @@
 [package]
 name = "cew"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Personal Rust utility library"
 license = "MIT OR Apache-2.0"
@@ -15,8 +15,10 @@ color-eyre = { version = "0.6.2", default-features = false, optional = true }
 opt-level = 3
 
 [features]
-default = ["color_eyre", "track_caller", "capture_spantrace"]
+default = ["color_eyre", "track_caller", "capture_spantrace", "block_on", "piping"]
 color_eyre = ["color-eyre"]
 track_caller = ["color-eyre?/track-caller"]
 capture_spantrace = ["color-eyre?/capture-spantrace"]
 url = ["color-eyre?/issue-url"]
+block_on = []
+piping = []
