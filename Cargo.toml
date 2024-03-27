@@ -6,7 +6,7 @@ description = "Personal Rust utility library"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Koranir/cew"
 keywords = ["utility", "simple", "logging"]
-categories = ["Rust patterns"]
+categories = ["rust-patterns"]
 
 [dependencies]
 color-eyre = { version = "0.6.2", default-features = false, optional = true }
