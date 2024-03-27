@@ -1,20 +1,10 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(clippy::missing_errors_doc)]
+#![doc = include_str!("../README.md")]
 
-//! A personal utility crate that shorten's [`color_eyre`]'s names and a little extra
-//!
-//! Run [`cew::init()`] to initialize [`color_eyre`]
-//!
-//! [`cew::R`] is short for [`color_eyre::Result`]
-//!
-//! [`cew::U`] is short for [`color_eyre::Result<()>`]
-//!
-//! [`cew::e!(..)`] is short for [`color_eyre::eyre::eyre!(..)`]
-//!
-//! [`cew::me!(..)`] is short for [`Err(color_eyre::eyre::eyre!(..))`]
-//!
-//! Also adds the globally implemented [`Pipe`], [`Inspect`], and [`Lay`]
-//! traits that provides a function to reduce the amount of stacked parenthesis.
+pub mod prelude {
+    pub use super::{Inspect, Lay, Pipe};
+}
 
 #[cfg(feature = "color_eyre")]
 pub use color_eyre_reexports::*;
@@ -48,29 +38,7 @@ mod color_eyre_reexports {
     }
 }
 
-/// Trait to prevent big wrapping '()'s everywhere.
-///
-/// # Example
-///
-/// ```rust
-/// // Take this function 'foo', which takes a value and returns itself
-/// fn foo(val: &str) -> &str {
-///     val
-/// }
-/// // That we want to use on this:
-/// let bar = String::new();
-///
-/// // When using it, you need something like this:
-/// let _ = foo(bar.as_str());
-/// // But if you forgot that you needed that `foo` call at the beginning,
-/// // you have to backtrack to the start of the call, then add braces, which is
-/// // where this crate comes in.
-///
-/// use cew::Piper;
-/// // It turns that mess into this:
-/// let _ = bar.as_str().pipe(foo);
-///
-/// ```
+/// Apply a transformation to self, returning the result.
 pub trait Pipe {
     #[must_use]
     fn pipe<T>(self, f: impl FnOnce(Self) -> T) -> T
@@ -82,6 +50,8 @@ pub trait Pipe {
 }
 impl<T> Pipe for T {}
 
+/// Run a function on a shared reference to self, but return self.
+/// Use the fallible/nullable functions [`inspect_try`] and [`inspect_maybe`] if you want to propagate errors.
 pub trait Inspect {
     /// Will ignore the result of `f`. If `f` returns a result or option, check
     /// [`inspect_try`] or [`inspect_maybe`]
@@ -113,6 +83,8 @@ pub trait Inspect {
 }
 impl<T> Inspect for T {}
 
+/// Run a function that mutates self, returning self.
+/// Use the fallible/nullable functions [`lay_try`] and [`lay_maybe`] if you want to propagate errors.
 pub trait Lay {
     #[must_use]
     fn lay<T>(mut self, f: impl FnOnce(&mut Self) -> T) -> Self
@@ -141,3 +113,45 @@ pub trait Lay {
     }
 }
 impl<T> Lay for T {}
+
+/// Block on a future.
+pub trait BlockOn
+where
+    Self: std::future::Future + Sized,
+{
+    fn block_on(self) -> Self::Output {
+        fn make_raw_waker() -> std::task::RawWaker {
+            static RAW_VTABLE: std::task::RawWakerVTable =
+                std::task::RawWakerVTable::new(|_| make_raw_waker(), |_| {}, |_| {}, |_| {});
+            std::task::RawWaker::new(std::ptr::null(), &RAW_VTABLE)
+        }
+
+        let mut fut = std::pin::pin!(self);
+        let noop_waker = unsafe { std::task::Waker::from_raw(make_raw_waker()) };
+        let mut context = std::task::Context::from_waker(&noop_waker);
+        loop {
+            if let std::task::Poll::Ready(output) =
+                std::future::Future::poll(fut.as_mut(), &mut context)
+            {
+                return output;
+            }
+        }
+    }
+}
+impl<T: std::future::Future> BlockOn for T {}
+
+#[cfg(test)]
+mod test {
+    use crate::BlockOn;
+
+    #[test]
+    fn test_block_on() {
+        async fn testfn() -> bool {
+            true
+        }
+
+        let _out = testfn().block_on();
+
+        assert!(_out)
+    }
+}
