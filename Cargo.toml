@@ -15,10 +15,9 @@ color-eyre = { version = "0.6.2", default-features = false, optional = true }
 opt-level = 3
 
 [features]
-default = ["color_eyre", "track_caller", "capture_spantrace", "block_on", "piping"]
-color_eyre = ["color-eyre"]
-track_caller = ["color-eyre?/track-caller"]
-capture_spantrace = ["color-eyre?/capture-spantrace"]
-url = ["color-eyre?/issue-url"]
-block_on = []
+default = ["color-eyre", "track-caller", "capture-spantrace", "block-on", "piping"]
+track-caller = ["color-eyre?/track-caller"]
+capture-spantrace = ["color-eyre?/capture-spantrace"]
+issue-url = ["color-eyre?/issue-url"]
+block-on = []
 piping = []

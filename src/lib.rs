@@ -4,16 +4,16 @@
 
 pub mod prelude {
     #[cfg(feature = "piping")]
-    pub use super::{Inspect as _, Lay as _, Pipe as _};
+    pub use super::{Inspect, Lay, Pipe};
 
-    #[cfg(feature = "block_on")]
-    pub use super::BlockOn as _;
+    #[cfg(feature = "block-on")]
+    pub use super::BlockOn;
 }
 
-#[cfg(feature = "color_eyre")]
+#[cfg(feature = "color-eyre")]
 pub use color_eyre_reexports::*;
 
-#[cfg(feature = "color_eyre")]
+#[cfg(feature = "color-eyre")]
 mod color_eyre_reexports {
 
     // pub use color_eyre;
@@ -124,7 +124,7 @@ mod piping {
 #[cfg(feature = "piping")]
 pub use piping::*;
 
-#[cfg(feature = "block_on")]
+#[cfg(feature = "block-on")]
 mod block_on {
     /// Block on a future.
     pub trait BlockOn
@@ -168,7 +168,7 @@ mod block_on {
         }
     }
 }
-#[cfg(feature = "block_on")]
+#[cfg(feature = "block-on")]
 pub use block_on::*;
 
 #[cfg(all(test, feature = "piping"))]
