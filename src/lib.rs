@@ -174,11 +174,8 @@ mod block_on {
 pub use block_on::*;
 
 #[cfg(feature = "tracing")]
-pub use tracing;
-#[cfg(feature = "tracing")]
-pub mod tracing_utils {
-    use tracing::level_filters::LevelFilter;
-
+pub mod tracing {
+    pub use tracing;
     pub use tracing_subscriber as subscriber;
 
     pub mod prelude {
@@ -188,24 +185,20 @@ pub mod tracing_utils {
         };
     }
 
-    use tracing_subscriber::{
-        filter::{FilterExt, FromEnvError, Targets},
-        fmt,
-        layer::SubscriberExt,
-        util::{SubscriberInitExt, TryInitError},
-        EnvFilter, Layer, Registry,
-    };
-
     #[derive(Debug, thiserror::Error)]
     pub enum Error {
         #[error("{0}")]
-        TryInit(#[from] TryInitError),
+        TryInit(#[from] subscriber::util::TryInitError),
         #[error("{0}")]
-        EnvFilter(#[from] FromEnvError),
+        EnvFilter(#[from] subscriber::filter::FromEnvError),
     }
 
-    pub fn init_tracing_fmt_env<T, F, S>(
-        layer: fmt::Layer<Registry>,
+    pub use subscriber::fmt::layer as fmt_layer;
+    pub use tracing::level_filters::LevelFilter;
+    pub use tracing::Level;
+    /// Use with [`fmt_layer`]
+    pub fn init_fmt_env<T, F, S>(
+        layer: subscriber::fmt::Layer<subscriber::Registry>,
         default_level: LevelFilter,
         targets: impl IntoIterator<Item = (T, F)>,
     ) -> Result<(), Error>
@@ -213,12 +206,17 @@ pub mod tracing_utils {
         String: From<T>,
         LevelFilter: From<F>,
     {
-        let env_filter = EnvFilter::builder()
+        use tracing_subscriber::filter::FilterExt;
+        use tracing_subscriber::layer::SubscriberExt;
+        use tracing_subscriber::util::SubscriberInitExt;
+        use tracing_subscriber::Layer;
+
+        let env_filter = subscriber::EnvFilter::builder()
             .with_default_directive(tracing_subscriber::filter::Directive::from(
                 LevelFilter::OFF,
             ))
             .from_env()?;
-        let target_filter = Targets::new()
+        let target_filter = subscriber::filter::Targets::new()
             .with_default(default_level)
             .with_targets(targets);
         tracing_subscriber::registry()

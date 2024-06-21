@@ -12,6 +12,24 @@ Run `cew::init()` to initialize `color_eyre`
 
 `cew::me!(..)` is short for `Err(color_eyre::eyre::eyre!(..))`
 
-The `Pipe`, `Inspect`, and `Lay` traits provide functions to reduce the amount of stacked parenthesis in long method chains.
+The `Pipe`, `Inspect`, and `Lay` traits provide functions to reduce the amount of stacked parenthesis in long method chains, like the `tap` crate.
 
-The `tracing_subscriber` quick init should be overriden with a custom impl if needed, but it get you started quickly.
+The `tracing_subscriber` quick init should be overriden with a custom impl if needed, but it gets you started quickly.
+
+Usage:
+```rs
+use cew::prelude::*;
+
+fn main() -> cew::U {
+    cew::init()?;
+    cew::tracing::init_fmt_env(
+      cew::tracing::fmt_layer().without_time(),
+      cew::tracing::LevelFilter::INFO,
+      []
+    )?;
+
+    info!("Traced").
+
+    cew::me!("Error");
+}
+```
