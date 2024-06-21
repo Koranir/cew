@@ -8,6 +8,9 @@ pub mod prelude {
 
     #[cfg(feature = "block-on")]
     pub use super::BlockOn;
+
+    #[cfg(feature = "tracing")]
+    pub use super::tracing_utils::prelude::*;
 }
 
 #[cfg(feature = "color-eyre")]
@@ -28,10 +31,10 @@ mod color_eyre_reexports {
     /// Construct an ad-hoc `color_eyre::Result::Err` from a string
     #[macro_export]
     macro_rules! me {
-    ($($t:tt)*) => {
-        core::result::Result::Err(cew::e!($($t)*))
-    };
-}
+        ($($t:tt)*) => {
+            core::result::Result::Err(cew::e!($($t)*))
+        };
+    }
 
     /// Initializes `color_eyre`
     ///
@@ -158,18 +161,75 @@ mod block_on {
 
         #[test]
         fn test_block_on() {
+            #[allow(clippy::unused_async)]
             async fn testfn() -> bool {
                 true
             }
 
-            let _out = testfn().block_on();
-
-            assert!(_out)
+            assert!(testfn().block_on());
         }
     }
 }
 #[cfg(feature = "block-on")]
 pub use block_on::*;
+
+#[cfg(feature = "tracing")]
+pub use tracing;
+#[cfg(feature = "tracing")]
+pub mod tracing_utils {
+    use tracing::level_filters::LevelFilter;
+
+    pub use tracing_subscriber as subscriber;
+
+    pub mod prelude {
+        pub use tracing::{
+            debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span,
+            warn, warn_span, Instrument,
+        };
+    }
+
+    use tracing_subscriber::{
+        filter::{FilterExt, FromEnvError, Targets},
+        fmt,
+        layer::SubscriberExt,
+        util::{SubscriberInitExt, TryInitError},
+        EnvFilter, Layer, Registry,
+    };
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum Error {
+        #[error("{0}")]
+        TryInit(#[from] TryInitError),
+        #[error("{0}")]
+        EnvFilter(#[from] FromEnvError),
+    }
+
+    pub fn init_tracing_fmt_env<T, F, S>(
+        layer: fmt::Layer<Registry>,
+        default_level: LevelFilter,
+        targets: impl IntoIterator<Item = (T, F)>,
+    ) -> Result<(), Error>
+    where
+        String: From<T>,
+        LevelFilter: From<F>,
+    {
+        let env_filter = EnvFilter::builder()
+            .with_default_directive(tracing_subscriber::filter::Directive::from(
+                LevelFilter::OFF,
+            ))
+            .from_env()?;
+        let target_filter = Targets::new()
+            .with_default(default_level)
+            .with_targets(targets);
+        tracing_subscriber::registry()
+            .with(layer.with_filter(env_filter.or(target_filter)))
+            .try_init()?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "thiserror")]
+pub use thiserror;
 
 #[cfg(all(test, feature = "piping"))]
 mod test {

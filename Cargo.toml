@@ -1,6 +1,6 @@
 [package]
 name = "cew"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 description = "Personal Rust utility library"
 license = "MIT OR Apache-2.0"
@@ -10,14 +10,15 @@ categories = ["rust-patterns"]
 
 [dependencies]
 color-eyre = { version = "0.6.2", default-features = false, optional = true }
-
-[profile.dev.package.backtrace]
-opt-level = 3
+thiserror = { version = "1.0.61", optional = true }
+tracing = { version = "0.1.40", optional = true }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"], optional = true }
 
 [features]
-default = ["color-eyre", "track-caller", "capture-spantrace", "block-on", "piping"]
+default = ["color-eyre", "track-caller", "capture-spantrace", "block-on", "piping", "tracing", "thiserror"]
 track-caller = ["color-eyre?/track-caller"]
 capture-spantrace = ["color-eyre?/capture-spantrace"]
 issue-url = ["color-eyre?/issue-url"]
 block-on = []
 piping = []
+tracing = ["dep:tracing", "tracing-subscriber", "thiserror"]
