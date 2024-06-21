@@ -10,7 +10,7 @@ pub mod prelude {
     pub use super::BlockOn;
 
     #[cfg(feature = "tracing")]
-    pub use super::tracing_utils::prelude::*;
+    pub use super::tracing::prelude::*;
 }
 
 #[cfg(feature = "color-eyre")]
