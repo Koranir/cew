@@ -197,8 +197,8 @@ pub mod tracing {
     pub use tracing::level_filters::LevelFilter;
     pub use tracing::Level;
     /// Use with [`fmt_layer`]
-    pub fn init_fmt_env<T, F, S>(
-        layer: subscriber::fmt::Layer<subscriber::Registry>,
+    pub fn init_filtered_w_env<T, F>(
+        layer: impl subscriber::Layer<subscriber::Registry> + Send + Sync + 'static,
         default_level: LevelFilter,
         targets: impl IntoIterator<Item = (T, F)>,
     ) -> Result<(), Error>
@@ -209,7 +209,6 @@ pub mod tracing {
         use tracing_subscriber::filter::FilterExt;
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
-        use tracing_subscriber::Layer;
 
         let env_filter = subscriber::EnvFilter::builder()
             .with_default_directive(tracing_subscriber::filter::Directive::from(
@@ -219,8 +218,9 @@ pub mod tracing {
         let target_filter = subscriber::filter::Targets::new()
             .with_default(default_level)
             .with_targets(targets);
+        let filter = FilterExt::or(env_filter, target_filter);
         tracing_subscriber::registry()
-            .with(layer.with_filter(env_filter.or(target_filter)))
+            .with(layer.with_filter(filter))
             .try_init()?;
         Ok(())
     }
@@ -231,10 +231,23 @@ pub use thiserror;
 
 #[cfg(all(test, feature = "piping"))]
 mod test {
-    use crate::prelude::*;
+    use crate as cew;
+    use cew::prelude::*;
 
     #[test]
     fn test_thing() {
         let _ = 100.pipe(|n| n + 10);
+    }
+
+    #[allow(dead_code)]
+    fn ye() -> cew::U {
+        cew::init()?;
+        cew::tracing::init_filtered_w_env::<String, cew::tracing::LevelFilter>(
+            cew::tracing::fmt_layer().without_time(),
+            cew::tracing::LevelFilter::TRACE,
+            [],
+        )?;
+
+        Ok(())
     }
 }

@@ -22,7 +22,8 @@ use cew::prelude::*;
 
 fn main() -> cew::U {
     cew::init()?;
-    cew::tracing::init_fmt_env(
+    // turbofish is needed here, as the type parameters cannot be inferred.
+    cew::tracing::init_filtered_w_env::<String, cew::tracing::Layer>(
       cew::tracing::fmt_layer().without_time(),
       cew::tracing::LevelFilter::INFO,
       []
