@@ -23,6 +23,8 @@ mod color_eyre_reexports {
 
     pub use color_eyre::Report as E;
     pub use color_eyre::Result as R;
+    pub use color_eyre::Section as EExt;
+    pub use color_eyre::SectionExt as EExt2;
 
     /// type alias for `Result<(), Report>`
     pub type U = R<()>;
