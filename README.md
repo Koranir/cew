@@ -1,16 +1,8 @@
 A personal utility crate.
 
-Adds reexports of `color_eyre`, piping traits (`Pipe`, `Inspect`, `Lay`), a `block_on` implementation for futures, reexports `thiserror`, and reexports `tracing` + `tracing_subscriber` (as `tracing_utils::subscriber`) with a prelude and quick init function.
+Adds reexports of `snafu`, new piping traits (`Pipe`, `Inspect`, `Lay`), and reexports `tracing` + `tracing_subscriber` (as `tracing_utils::subscriber`) with a prelude and quick init function.
 
-Run `cew::init()` to initialize `color_eyre`
-
-`cew::R` is short for `color_eyre::Result`
-
-`cew::U` is short for `color_eyre::Result<()>`
-
-`cew::e!(..)` is short for `color_eyre::eyre::eyre!(..)`
-
-`cew::me!(..)` is short for `Err(color_eyre::eyre::eyre!(..))`
+Snafu's `Whatever` type is reexported as `R = Result<T, Whatever>`, and the `R<()>` is reexported as `U`. Use `cew::e!()` to call `snafu::whatever!()` and `cew::me!()` to call `Err(snafu::whatever!())`.
 
 The `Pipe`, `Inspect`, and `Lay` traits provide functions to reduce the amount of stacked parenthesis in long method chains, like the `tap` crate.
 
@@ -21,16 +13,14 @@ Usage:
 use cew::prelude::*;
 
 fn main() -> cew::U {
-    cew::init()?;
-    // turbofish is needed here, as the type parameters cannot be inferred.
-    cew::tracing::init_filtered_w_env::<String, cew::tracing::Layer>(
+    cew::tracing::init_filtered_w_env(
       cew::tracing::fmt_layer().without_time(),
-      cew::tracing::LevelFilter::INFO,
-      []
-    )?;
+      // What should the default level be if the environment variable is not set?
+      "info,verbose_crate=warn"
+    ).whatever_context("Failed to initialise tracing")?;
 
     info!("Traced").
 
-    cew::me!("Error");
+    cew::me!("Error")
 }
 ```

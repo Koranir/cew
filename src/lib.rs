@@ -6,51 +6,35 @@ pub mod prelude {
     #[cfg(feature = "piping")]
     pub use super::{Inspect, Lay, Pipe};
 
-    #[cfg(feature = "block-on")]
-    pub use super::BlockOn;
-
     #[cfg(feature = "tracing")]
     pub use super::tracing::prelude::*;
+
+    #[cfg(feature = "snafu")]
+    pub use super::{OptionExt as _, ResultExt as _};
 }
 
-#[cfg(feature = "color-eyre")]
-pub use color_eyre_reexports::*;
+#[cfg(feature = "snafu")]
+pub use snafu_reexports::*;
+#[cfg(feature = "snafu")]
+mod snafu_reexports {
+    pub use snafu::{OptionExt, ResultExt, Snafu};
 
-#[cfg(feature = "color-eyre")]
-mod color_eyre_reexports {
-
-    // pub use color_eyre;
-
-    pub use color_eyre::Report as E;
-    pub use color_eyre::Result as R;
-    pub use color_eyre::Section as EExt;
-    pub use color_eyre::SectionExt as EExt2;
-
-    /// type alias for `Result<(), Report>`
+    pub use snafu::Whatever;
+    pub type R<T, E = Whatever> = std::result::Result<T, E>;
     pub type U = R<()>;
 
-    pub use color_eyre::eyre::eyre as e;
+    pub use snafu::whatever as e;
 
-    /// Construct an ad-hoc `color_eyre::Result::Err` from a string
     #[macro_export]
     macro_rules! me {
         ($($t:tt)*) => {
             core::result::Result::Err(cew::e!($($t)*))
         };
     }
-
-    /// Initializes `color_eyre`
-    ///
-    /// # Errors
-    /// When called more than once
-    pub fn init() -> U {
-        color_eyre::install()
-    }
 }
 
 #[cfg(feature = "piping")]
 mod piping {
-
     /// Apply a transformation to self, returning the result.
     pub trait Pipe {
         #[must_use]
@@ -126,55 +110,20 @@ mod piping {
         }
     }
     impl<T> Lay for T {}
-}
-#[cfg(feature = "piping")]
-pub use piping::*;
-
-#[cfg(feature = "block-on")]
-mod block_on {
-    /// Block on a future.
-    pub trait BlockOn
-    where
-        Self: std::future::Future + Sized,
-    {
-        fn block_on(self) -> Self::Output {
-            fn make_raw_waker() -> std::task::RawWaker {
-                static RAW_VTABLE: std::task::RawWakerVTable =
-                    std::task::RawWakerVTable::new(|_| make_raw_waker(), |_| {}, |_| {}, |_| {});
-                std::task::RawWaker::new(std::ptr::null(), &RAW_VTABLE)
-            }
-
-            let mut fut = std::pin::pin!(self);
-            let noop_waker = unsafe { std::task::Waker::from_raw(make_raw_waker()) };
-            let mut context = std::task::Context::from_waker(&noop_waker);
-            loop {
-                if let std::task::Poll::Ready(output) =
-                    std::future::Future::poll(fut.as_mut(), &mut context)
-                {
-                    return output;
-                }
-            }
-        }
-    }
-    impl<T: std::future::Future> BlockOn for T {}
 
     #[cfg(test)]
     mod test {
-        use crate::BlockOn;
+        use crate as cew;
+        use cew::prelude::*;
 
         #[test]
-        fn test_block_on() {
-            #[allow(clippy::unused_async)]
-            async fn testfn() -> bool {
-                true
-            }
-
-            assert!(testfn().block_on());
+        fn test_thing() {
+            let _ = 100.pipe(|n| n + 10);
         }
     }
 }
-#[cfg(feature = "block-on")]
-pub use block_on::*;
+#[cfg(feature = "piping")]
+pub use piping::*;
 
 #[cfg(feature = "tracing")]
 pub mod tracing {
@@ -188,69 +137,68 @@ pub mod tracing {
         };
     }
 
-    #[derive(Debug, thiserror::Error)]
+    #[derive(Debug)]
     pub enum Error {
-        #[error("{0}")]
-        TryInit(#[from] subscriber::util::TryInitError),
-        #[error("{0}")]
-        EnvFilter(#[from] subscriber::filter::FromEnvError),
+        TryInit(subscriber::util::TryInitError),
+        EnvFilter(subscriber::filter::ParseError),
+        VarError(std::env::VarError),
+    }
+
+    impl std::fmt::Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::TryInit(e) => write!(f, "{e}"),
+                Self::EnvFilter(e) => write!(f, "{e}"),
+                Self::VarError(e) => write!(f, "Failed to read filter from RUST_LOG: {e}"),
+            }
+        }
+    }
+
+    impl std::error::Error for Error {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            match self {
+                Self::TryInit(e) => Some(e),
+                Self::EnvFilter(e) => Some(e),
+                Self::VarError(e) => Some(e),
+            }
+        }
     }
 
     pub use subscriber::fmt::layer as fmt_layer;
     pub use tracing::level_filters::LevelFilter;
     pub use tracing::Level;
-    /// Use with [`fmt_layer`]
-    pub fn init_filtered_w_env<T, F>(
+
+    /// Initialises a tracing subscriber with a given layer and an env filter.
+    ///
+    /// The env filter is read from the `RUST_LOG` environment variable, but if that variable is not set, it will use the provided default filter, using the regular env logger syntax.
+    ///
+    /// Tip: Use with [`fmt_layer`]
+    pub fn init_filtered_w_env(
         layer: impl subscriber::Layer<subscriber::Registry> + Send + Sync + 'static,
-        default_level: LevelFilter,
-        targets: impl IntoIterator<Item = (T, F)>,
-    ) -> Result<(), Error>
-    where
-        String: From<T>,
-        LevelFilter: From<F>,
-    {
-        use tracing_subscriber::filter::FilterExt;
+        default_env_filter: &str,
+    ) -> Result<(), Error> {
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let env_filter = subscriber::EnvFilter::builder()
-            .with_default_directive(tracing_subscriber::filter::Directive::from(
-                LevelFilter::OFF,
-            ))
-            .from_env()?;
-        let target_filter = subscriber::filter::Targets::new()
-            .with_default(default_level)
-            .with_targets(targets);
-        let filter = FilterExt::or(env_filter, target_filter);
+        let env;
+        let filter = match std::env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV) {
+            Ok(f) => {
+                env = f;
+                &env
+            }
+            Err(std::env::VarError::NotPresent) => default_env_filter,
+            Err(e) => return Err(Error::VarError(e)),
+        };
+        let filter = tracing_subscriber::EnvFilter::try_new(filter).map_err(Error::EnvFilter)?;
+
         tracing_subscriber::registry()
             .with(layer.with_filter(filter))
-            .try_init()?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "thiserror")]
-pub use thiserror;
-
-#[cfg(all(test, feature = "piping"))]
-mod test {
-    use crate as cew;
-    use cew::prelude::*;
-
-    #[test]
-    fn test_thing() {
-        let _ = 100.pipe(|n| n + 10);
-    }
-
-    #[allow(dead_code)]
-    fn ye() -> cew::U {
-        cew::init()?;
-        cew::tracing::init_filtered_w_env::<String, cew::tracing::LevelFilter>(
-            cew::tracing::fmt_layer().without_time(),
-            cew::tracing::LevelFilter::TRACE,
-            [],
-        )?;
+            .try_init()
+            .map_err(Error::TryInit)?;
 
         Ok(())
     }
 }
+
+#[cfg(feature = "snafu")]
+pub use snafu;
