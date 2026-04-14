@@ -169,10 +169,13 @@ pub mod tracing {
     pub use tracing::Level;
 
     /// Wraps a layer with an env filter.
-    pub fn filtered_w_env(
-        layer: impl subscriber::Layer<subscriber::Registry> + Send + Sync + 'static,
+    pub fn filtered_w_env<R>(
+        layer: impl subscriber::Layer<R> + Send + Sync + 'static,
         default_env_filter: &str,
-    ) -> Result<impl subscriber::Layer<subscriber::Registry>, Error> {
+    ) -> Result<impl subscriber::Layer<R>, Error>
+    where
+        R: tracing::Subscriber + for<'a> subscriber::registry::LookupSpan<'a>,
+    {
         let env;
         let filter = match std::env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV) {
             Ok(f) => {
