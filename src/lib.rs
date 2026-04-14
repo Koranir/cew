@@ -168,6 +168,25 @@ pub mod tracing {
     pub use tracing::level_filters::LevelFilter;
     pub use tracing::Level;
 
+    /// Wraps a layer with an env filter.
+    pub fn filtered_w_env(
+        layer: impl subscriber::Layer<subscriber::Registry> + Send + Sync + 'static,
+        default_env_filter: &str,
+    ) -> Result<impl subscriber::Layer<subscriber::Registry>, Error> {
+        let env;
+        let filter = match std::env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV) {
+            Ok(f) => {
+                env = f;
+                &env
+            }
+            Err(std::env::VarError::NotPresent) => default_env_filter,
+            Err(e) => return Err(Error::VarError(e)),
+        };
+        let filter = tracing_subscriber::EnvFilter::try_new(filter).map_err(Error::EnvFilter)?;
+
+        Ok(layer.with_filter(filter))
+    }
+
     /// Initialises a tracing subscriber with a given layer and an env filter.
     ///
     /// The env filter is read from the `RUST_LOG` environment variable, but if that variable is not set, it will use the provided default filter, using the regular env logger syntax.
@@ -180,19 +199,8 @@ pub mod tracing {
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
 
-        let env;
-        let filter = match std::env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV) {
-            Ok(f) => {
-                env = f;
-                &env
-            }
-            Err(std::env::VarError::NotPresent) => default_env_filter,
-            Err(e) => return Err(Error::VarError(e)),
-        };
-        let filter = tracing_subscriber::EnvFilter::try_new(filter).map_err(Error::EnvFilter)?;
-
         tracing_subscriber::registry()
-            .with(layer.with_filter(filter))
+            .with(filtered_w_env(layer, default_env_filter)?)
             .try_init()
             .map_err(Error::TryInit)?;
 
